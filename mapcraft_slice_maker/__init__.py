@@ -5,8 +5,8 @@ import osmwriter
 
 def convert(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument("inputfile")
-    parser.add_argument("outputfile")
+    parser.add_argument("inputfile", help="Input shp/geojson file", metavar="INPUT")
+    parser.add_argument("outputfile", help="Output OSM XML filename.", metavar="OUTPUT")
 
     options = parser.parse_args(args)
 
@@ -41,23 +41,28 @@ def convert(args):
 
     max_way_id = 1
     for shape in inputdata:
-        way_nodes = []
-        way_id = max_way_id
-        max_way_id += 1
         if shape['geometry']['type'] == 'Polygon':
+            way_nodes = []
+            way_id = max_way_id
+            max_way_id += 1
             outer_ring = shape['geometry']['coordinates'][0]
             for x, y in outer_ring:
                 way_nodes.append(nodes[(x, y)])
             way_nodes.append(nodes[outer_ring[0]])
+            writer.way(way_id, {}, way_nodes, version=1)
         elif shape['geometry']['type'] == 'MultiPolygon':
             for poly in shape['geometry']['coordinates']:
+                way_nodes = []
+                way_id = max_way_id
+                max_way_id += 1
                 outer_ring = poly[0]
                 for x, y in outer_ring:
                     way_nodes.append(nodes[(x, y)])
                 way_nodes.append(nodes[outer_ring[0]])
+
+                writer.way(way_id, {}, way_nodes, version=1)
         else:
             raise NotImplementedError()
-        writer.way(way_id, {}, way_nodes, version=1)
 
     writer.close()
 
