@@ -2,18 +2,9 @@ import sys
 import argparse
 import fiona
 import osmwriter
+from collections import defaultdict
 
-def convert(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("inputfile", help="Input shp/geojson file", metavar="INPUT")
-    parser.add_argument("outputfile", help="Output OSM XML filename.", metavar="OUTPUT")
-
-    options = parser.parse_args(args)
-
-    with fiona.open(options.inputfile) as fp:
-        inputdata = list(fp)
-
-
+def write_data(inputdata, outputfilename):
     nodes = {}
     max_node_id = 1
     for shape in inputdata:
@@ -35,7 +26,7 @@ def convert(args):
             raise NotImplementedError()
 
 
-    writer = osmwriter.OSMWriter(options.outputfile)
+    writer = osmwriter.OSMWriter(outputfilename)
     for (x, y), nodeid in sorted(nodes.items(), key=lambda x: x[1]):
         writer.node(nodeid, y, x, version=1)
 
@@ -67,6 +58,30 @@ def convert(args):
     writer.close()
 
 
+
+
+
+def convert(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-g", "--group", help="Group by this field value", default=None)
+    parser.add_argument("inputfile", help="Input shp/geojson file", metavar="INPUT")
+    parser.add_argument("outputfile", help="Output OSM XML filename, or prefix", metavar="OUTPUT")
+
+    options = parser.parse_args(args)
+
+    with fiona.open(options.inputfile) as fp:
+        inputdata = list(fp)
+
+    if options.group:
+        grouped = defaultdict(list)
+        for shape in inputdata:
+            grouped[shape['properties'].get(options.group)].append(shape)
+
+        for key in grouped.keys():
+            write_data(grouped[key], "{}{}.osm".format(options.outputfile, key))
+
+    else:
+        write_data(inputdata, options.outputfilename)
 
 
 def main():
