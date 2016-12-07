@@ -25,6 +25,7 @@ setup(name="mapcraft-slice-maker",
           'console_scripts': [
               'geojson2mapcraft = mapcraft_slice_maker:main',
               'shp2mapcraft = mapcraft_slice_maker:main',
+              'bbox2mapcraft = mapcraft_slice_maker:bbox2mapcraft',
           ]
       },
 )
