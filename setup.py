@@ -11,7 +11,9 @@ setup(name="mapcraft-slice-maker",
       packages=['mapcraft_slice_maker'],
       install_requires = [
           "fiona",
-          "openstreetmap-writer"
+          "shapely",
+          "openstreetmap-writer",
+          "requests",
       ],
       license = 'AGPLv3+',
       description = "Convert geofiles into mapcraft suitable slice files",

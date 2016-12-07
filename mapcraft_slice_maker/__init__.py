@@ -3,6 +3,8 @@ import argparse
 import fiona
 import osmwriter
 from collections import defaultdict
+import requests
+import shapely.geometry
 
 def write_data(inputdata, outputfilename):
     nodes = {}
@@ -86,14 +88,22 @@ def convert(args):
 def bbox2mapcraft():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-o', '--output', required=True)
-    parser.add_argument('-b', '--bbox', required=True)
+    parser.add_argument('-b', '--bbox')
+    parser.add_argument("-r", "--relation", type=int)
 
     parser.add_argument('-w', '--width', type=int, default=10)
     parser.add_argument('-h', '--height', type=int, default=10)
 
     args = parser.parse_args()
 
-    top, left, bottom, right = [float(x) for x in args.bbox.split(" ")]
+    if args.bbox:
+        top, left, bottom, right = [float(x) for x in args.bbox.split(" ")]
+        geom = None
+    elif args.relation:
+        rel_id = args.relation
+        resp = requests.get("http://nominatim.openstreetmap.org/reverse", params={'osm_type': 'R', 'format':'json', 'polygon_geojson': '1', 'osm_id': str(args.relation)}, headers={'user-agent': 'bbox2mapcraft (aka mapcraft-slice-maker)'})
+        geom = shapely.geometry.shape(resp.json()['geojson'])
+        left, top, right, bottom = geom.bounds
 
     bbox_width = right - left
     bbox_height = bottom - top
@@ -111,7 +121,7 @@ def bbox2mapcraft():
             l = left + i*cell_width
             r = left + (i+1)*cell_width
 
-            cells.append({
+            this_cell = {
                 'type': 'Feature', 
                 'properties': {},
                 'geometry': {
@@ -120,7 +130,14 @@ def bbox2mapcraft():
                             [(l, t), (r, t), (r, b), (l, b), (l, t)],
                         ],
                     }
-                })
+                }
+
+            if geom is None:
+                cells.append(this_cell)
+            else:
+                this_cell_geom = shapely.geometry.shape(this_cell['geometry'])
+                if this_cell_geom.intersects(geom):
+                    cells.append(this_cell)
 
     inputdata = cells
 
